@@ -1,0 +1,53 @@
+apispec @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_25jl60pjbw/croot/apispec_1711399631515/work
+blinker @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_d64vvpf_j3/croot/blinker_1696539070114/work
+CacheControl==0.14.0
+cachetools==5.4.0
+certifi==2024.7.4
+cffi==1.17.0
+charset-normalizer==3.3.2
+click @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_61srkg7e2e/croot/click_1698129815327/work
+cryptography==43.0.0
+firebase-admin==6.5.0
+Flask @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_b6zka5i2cn/croot/flask_1716545886197/work
+Flask-Cors @ file:///tmp/build/80754af9/flask_cors_1614875208036/work
+flask-smorest @ file:///home/conda/feedstock_root/build_artifacts/flask-smorest_1708987715904/work
+Flask-SQLAlchemy @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_214y9q2o4g/croot/flask-sqlalchemy_1712567274846/work
+google-api-core==2.19.1
+google-api-python-client==2.140.0
+google-auth==2.33.0
+google-auth-httplib2==0.2.0
+google-cloud-core==2.4.1
+google-cloud-firestore==2.17.0
+google-cloud-storage==2.18.2
+google-crc32c==1.5.0
+google-resumable-media==2.7.2
+googleapis-common-protos==1.63.2
+greenlet @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_516imz09pb/croot/greenlet_1702059966336/work
+grpcio==1.65.4
+grpcio-status==1.62.3
+httplib2==0.22.0
+idna==3.7
+itsdangerous @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_00jdi1gu23/croot/itsdangerous_1716533346702/work
+Jinja2 @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_44yzu12j7f/croot/jinja2_1716993410427/work
+MarkupSafe @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_a84ni4pci8/croot/markupsafe_1704206002077/work
+marshmallow @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_02nwv12r4m/croot/marshmallow_1682620732619/work
+msgpack==1.0.8
+packaging @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_81ri4yfpjw/croot/packaging_1720101866878/work
+proto-plus==1.24.0
+protobuf==4.25.4
+pyasn1==0.6.0
+pyasn1_modules==0.4.0
+pycparser==2.22
+PyJWT==2.9.0
+pyparsing==3.1.2
+python-dotenv @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_3ahu1_p9lb/croot/python-dotenv_1669132571851/work
+PyYAML @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_a8_sdgulmz/croot/pyyaml_1698096054705/work
+requests==2.32.3
+rsa==4.9
+six @ file:///tmp/build/80754af9/six_1644875935023/work
+SQLAlchemy @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_2cq7wud7iy/croot/sqlalchemy_1718378182237/work
+typing_extensions @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_93dg13ilv4/croot/typing_extensions_1715268840722/work
+uritemplate==4.1.1
+urllib3==2.2.2
+webargs @ file:///home/conda/feedstock_root/build_artifacts/webargs_1704684343892/work
+Werkzeug @ file:///private/var/folders/nz/j6p8yfhx1mv_0grj5xl4650h0000gp/T/abs_5bnbxlhunm/croot/werkzeug_1716533322814/work
