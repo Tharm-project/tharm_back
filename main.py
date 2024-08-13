@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 import firebase_set
-from .routes.routes import router
+from routes.routes import router
 
 # FastAPI 인스턴스 생성
 app = FastAPI()
