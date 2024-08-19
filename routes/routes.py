@@ -5,6 +5,7 @@ from passlib.context import CryptContext
 from schemas.schemas import UserSchema, Token, VideoSchema, ResourceSchema
 from fastapi.encoders import jsonable_encoder
 from datetime import datetime
+from routes.email_utils import send_email
 
 # 라우터 생성
 router = APIRouter()
@@ -30,13 +31,33 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         user = auth.get_user(decoded_token['uid'])
         return user
     except Exception as e:
-        raise HTTPException(status_code=401, detail="Invalid authentication credentials")
+        raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {str(e)}")
 
 @router.get("/")
 def home_page():
     # 메인 페이지(첫화면)은 현재 학습 중인 목록, 학습 목록 출력
     return {"message": "welcome to Tharm"}
 
+@router.get("/users")
+async def get_all_users():
+    try:
+        # Firestore에서 모든 유저 문서 가져오기
+        users_ref = db.collection('user')
+        docs = users_ref.stream()
+
+        # 유저 정보 저장을 위한 리스트 초기화
+        users = []
+
+        # 각 문서를 순회하며 데이터를 추출하여 리스트에 추가
+        for doc in docs:
+            user_data = doc.to_dict()  # 문서를 딕셔너리로 변환
+            user_data['id'] = doc.id   # 문서 ID를 포함시키기 위해 추가
+            users.append(user_data)
+
+        return {"users": users}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 # 회원가입
 @router.post("/create/user")
 async def create_new_user(create_user: UserSchema):
@@ -124,7 +145,17 @@ async def reset_password(data: UserSchema):
     try:
         # Firebase Authentication을 사용하여 비밀번호 재설정 링크를 이메일로 전송
         # Todo: 재설정 메일 테스트 필요
-        auth.send_password_reset_email(data.email)
+        email = data.email
+
+        # 이메일이 유효한지 확인
+        if not auth.get_user_by_email(email):
+            raise HTTPException(status_code=400, detail="User does not exist")
+        
+        # 비밀번호 재설정 링크 생성 -> 추후에 firebase에서 해당 링크에 들어갈 폼 작성해야함
+        reset_link = auth.generate_password_reset_link(data.email)
+        # 이메일 발송 -> 환경설정 파일에 이메일 넣어둘것
+        send_email(email, reset_link)
+
         return {"message": "비밀번호 재설정 메일을 발송하였습니다."}
 
     except Exception as e:
@@ -177,6 +208,4 @@ def get_video(video_id: str):
         return doc.to_dict()
     else:
         raise HTTPException(status_code=404, detail="영상을 찾을 수 없습니다.")
-    
-
     

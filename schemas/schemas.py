@@ -14,6 +14,7 @@ class UserSchema(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    refresh_token: str
     
 # Study 스키마 (학습)
 class StudySchema(BaseModel):
