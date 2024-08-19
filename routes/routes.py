@@ -1,16 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends, Form, Request, Header
+from fastapi import APIRouter, FastAPI, HTTPException, Depends
 from firebase_set import auth, firestore
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from schemas.schemas import UserSchema, Token, VideoSchema
 from fastapi.encoders import jsonable_encoder
 from datetime import datetime
-from services.emailutils import send_reset_email, generate_reset_pwtoken, get_email_from_pwtoken
-from itsdangerous import SignatureExpired
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from controller import video_controller, seeder
 
-# 라우터 생성
+app = FastAPI()
 router = APIRouter()
 
 # Firebase Firestore 클라이언트 연결
@@ -165,26 +163,8 @@ def reset_password(data: UserSchema):
     try:
         # Firebase Authentication을 사용하여 비밀번호 재설정 링크를 이메일로 전송
         # Todo: 재설정 메일 테스트 필요
-        email = data.email
-
-        # 이메일이 유효한지 확인
-        if not auth.get_user_by_email(email):
-            raise HTTPException(status_code=400, detail="존재하지 않는 유저입니다.")
         
-        # 비밀번호용 토큰 생성
-        token = generate_reset_pwtoken(email)
-
-        # Firestore에 토큰 저장
-        token_data = {
-            "email": email,
-            "token": token,
-            "creaeted_at": datetime.utcnow()
-        }
-        db.collection('password_reset_tokens').document(token).set(token_data)
-
-        # 이메일 발송 -> 환경설정 파일에 이메일 넣어둘것
-        send_reset_email(email, token)
-
+        auth.send_password_reset_email(data.email)
         return {"message": "비밀번호 재설정 메일을 발송하였습니다."}
 
     except Exception as e:
@@ -308,23 +288,26 @@ def get_resource():
     #pdf, 사진 파일 업로드 기능 구현 -> 문장 추출 -> 오차율 확인 및 저장 구현하기
     return {"message": "Resource"}
 
-#영상 저장
-@router.post("/video")
-def create_video(video: VideoSchema):
-    # 일단 샘플 1개만 저장해보고 상세 구현 예정
-    # 비동기 성능 처리 + 특정 시간마다, 특정 동작 반복 처리(트리거 또는 큐?가 여기도 있나?)
-    doc_ref = db.collection("video").document(str(video.id))
-    doc_ref.set(video)
+@router.post("/videos")
+async def create_video(video: VideoSchema):
+    await video_controller.create_video(video.model_dump())
+    return {"message": "Video saved successfully!"}
 
-    return {"message": "동영상 저장 완료!"}
-
-#영상 출력
-@router.get("/video/{video_id}")
-def get_video(video_id: str):
-    ref = db.collection("video").document(video_id)
+@router.get("/videos/{video_id}")
+async def get_video(video_id: str):
+    ref = db.collection("videos").document(video_id)
     doc = ref.get()
-    if doc.exists:
+    if doc.exists():
         return doc.to_dict()
     else:
-        raise HTTPException(status_code=404, detail="영상을 찾을 수 없습니다.")
+        raise HTTPException(status_code=404, detail="Video not found.")
+
+@router.post("/videos/update")
+async def update_videos():
+    return await video_controller.update_videos()
+
+async def lifespan(app: FastAPI):
+    # 애플리케이션이 시작될 때 실행
+    await seeder.seed_data()
+    yield {"message":"시더 처리 완료, 애플리케이션 종료~~"}
     

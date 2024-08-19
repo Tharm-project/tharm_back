@@ -1,5 +1,5 @@
 import os
-from firebase_admin import credentials, initialize_app
+from firebase_admin import credentials, storage, initialize_app
 
 
 # Firebase 인증서 경로 설정
@@ -11,3 +11,8 @@ def initialize_firebase():
         raise ValueError("FIREBASE_JSON environment variable not set")
     cred = credentials.Certificate(cred_path)
     initialize_app(cred)
+
+# Firebase Storage에 파일 업로드
+bucket = storage.bucket()
+blob = bucket.blob('path/to/file')
+blob.upload_from_filename('local/path/to/file')
