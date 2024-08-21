@@ -1,21 +1,20 @@
 from fastapi import APIRouter, HTTPException, Depends, Form, Request, Header
 from fastapi import APIRouter, FastAPI, HTTPException, Depends
-from firebase_set import auth, firestore
+from firebase_set import auth, db
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-from schemas.schemas import UserSchema, Token, VideoSchema
+from schemas.schemas import UserSchema, Token, VideoSchema, StudySchema
 from fastapi.encoders import jsonable_encoder
+from typing import List
 from datetime import datetime
-from controller import video_controller, seeder
+from controller import video_controller, resource_controller, study_controller, seeder
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from uuid import UUID
 
 app = FastAPI()
 router = APIRouter()
-
-# Firebase Firestore 클라이언트 연결
-db = firestore.client()
-
-# 템플릿 디렉터리 설정
-templates = Jinja2Templates(directory="templates")
+resourceController = resource_controller()
+studyController = study_controller()
 
 #datetime format set
 def format_datetime(dt: datetime) -> str:
@@ -281,12 +280,18 @@ def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=500, detail=f"An error occurred while deleting studies: {str(e)}")
 
 
-# 파일 업로드
-# todo: 최우선 순위임
-@router.get("/resource")
-def get_resource():
-    #pdf, 사진 파일 업로드 기능 구현 -> 문장 추출 -> 오차율 확인 및 저장 구현하기
-    return {"message": "Resource"}
+#파일 업로드
+#pdf 파일 업로드 기능 구현 -> 문장 추출 -> 오차율 확인 및 저장 구현하기
+@router.post("/resources/")
+async def create_resource(user_id: UUID, study_id: UUID, file: UploadFile = File(...)):
+    if file.content_type not in ["application/pdf"]:
+        raise HTTPException(status_code=400, detail="파일 타입이 안맞당")
+    
+    file_content = await file.read()
+
+    resource = resourceController.process_file(user_id, study_id, file_content, file.filename)
+    
+    return resource, {"message":"업로드 완료"}
 
 @router.post("/videos")
 async def create_video(video: VideoSchema):
@@ -310,4 +315,5 @@ async def lifespan(app: FastAPI):
     # 애플리케이션이 시작될 때 실행
     await seeder.seed_data()
     yield {"message":"시더 처리 완료, 애플리케이션 종료~~"}
-    
+
+

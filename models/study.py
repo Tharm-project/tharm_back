@@ -1,8 +1,5 @@
-from google.cloud import firestore
 from datetime import datetime
-from typing import Optional
-
-db = firestore.Client()
+from firebase_set import db
 
 class StudyModel:
     #모델 인스턴트 초기화(새로운 사용자 객체 생성)
