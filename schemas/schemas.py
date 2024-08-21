@@ -27,11 +27,12 @@ class StudySchema(BaseModel):
 # Resource 스키마(pdf, image 파일)
 class ResourceSchema(BaseModel):
     id: UUID4
+    user_id: UUID4
     study_id: UUID4
-    url: str
+    url: str #pdf/file에 대한 url
     sentence: Json # { 'data' : ["문장", ... ]} 이런식으로 들어오니 Json!
-    total: int
-    last_idx: int
+    total: int #전체 단어수
+    last_idx: int #마지막 단어/문장 위치
     created_at: Optional[datetime] = None
 
 # Search 스키마
