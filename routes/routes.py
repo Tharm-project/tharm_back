@@ -1,17 +1,23 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Form, Request
 from firebase_set import auth, firestore
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-from schemas.schemas import UserSchema, Token, VideoSchema, ResourceSchema
+from schemas.schemas import UserSchema, Token, VideoSchema
 from fastapi.encoders import jsonable_encoder
 from datetime import datetime
-from routes.email_utils import send_email
+from services.emailutils import send_reset_email, generate_reset_pwtoken, get_email_from_pwtoken
+from itsdangerous import SignatureExpired
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
 
 # 라우터 생성
 router = APIRouter()
 
 # Firebase Firestore 클라이언트 연결
 db = firestore.client()
+
+# 템플릿 디렉터리 설정
+templates = Jinja2Templates(directory="templates")
 
 #datetime format set
 def format_datetime(dt: datetime) -> str:
@@ -38,26 +44,6 @@ def home_page():
     # 메인 페이지(첫화면)은 현재 학습 중인 목록, 학습 목록 출력
     return {"message": "welcome to Tharm"}
 
-@router.get("/users")
-async def get_all_users():
-    try:
-        # Firestore에서 모든 유저 문서 가져오기
-        users_ref = db.collection('user')
-        docs = users_ref.stream()
-
-        # 유저 정보 저장을 위한 리스트 초기화
-        users = []
-
-        # 각 문서를 순회하며 데이터를 추출하여 리스트에 추가
-        for doc in docs:
-            user_data = doc.to_dict()  # 문서를 딕셔너리로 변환
-            user_data['id'] = doc.id   # 문서 ID를 포함시키기 위해 추가
-            users.append(user_data)
-
-        return {"users": users}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 # 회원가입
 @router.post("/create/user")
 async def create_new_user(create_user: UserSchema):
@@ -141,7 +127,7 @@ def find_user(user_id:str):
 
 # 비밀번호 재설정 요청
 @router.post("/find/reset-password")
-async def reset_password(data: UserSchema):
+def reset_password(data: UserSchema):
     try:
         # Firebase Authentication을 사용하여 비밀번호 재설정 링크를 이메일로 전송
         # Todo: 재설정 메일 테스트 필요
@@ -149,26 +135,80 @@ async def reset_password(data: UserSchema):
 
         # 이메일이 유효한지 확인
         if not auth.get_user_by_email(email):
-            raise HTTPException(status_code=400, detail="User does not exist")
+            raise HTTPException(status_code=400, detail="존재하지 않는 유저입니다.")
         
-        # 비밀번호 재설정 링크 생성 -> 추후에 firebase에서 해당 링크에 들어갈 폼 작성해야함
-        reset_link = auth.generate_password_reset_link(data.email)
+        # 비밀번호용 토큰 생성
+        token = generate_reset_pwtoken(email)
+
+        # Firestore에 토큰 저장
+        token_data = {
+            "email": email,
+            "token": token,
+            "creaeted_at": datetime.utcnow()
+        }
+        db.collection('password_reset_tokens').document(token).set(token_data)
+
         # 이메일 발송 -> 환경설정 파일에 이메일 넣어둘것
-        send_email(email, reset_link)
+        send_reset_email(email, token)
 
         return {"message": "비밀번호 재설정 메일을 발송하였습니다."}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/users/{user_id}")
-def get_user(user_id: str):
-    doc_ref = db.collection("users").document(user_id)
-    doc = doc_ref.get()
-    if doc.exists:
-        return doc.to_dict()
-    else:
-        raise HTTPException(status_code=404, detail="User not found")
+# 비밀번호 링크 요청시 반환할 페이지
+@router.get("/reset-password/{token}", response_class=HTMLResponse)
+def reset_password_form(request: Request, token: str):
+    try:
+        # 토큰 검증 (유효 시간 검사)
+        email = get_email_from_pwtoken(token)
+
+        # 검증된 토큰과 함께 비밀번호 재설정 폼 렌더링
+        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+
+    except SignatureExpired:
+        raise HTTPException(status_code=400, detail="토큰이 만료되었습니다.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"토큰 검증 중 오류가 발생했습니다: {str(e)}")
+
+# 비밀번호 교체 후 firestore에 업데이트
+@router.post("/reset-password")
+def complete_reset_password(token: str = Form(...), new_password: str = Form(...)):
+    try:
+        # 토큰에서 이메일 추출
+        email = get_email_from_pwtoken(token)
+
+        # Firestore에서 사용자 데이터 가져오기
+        user_doc = db.collection('users').where('email', '==', email).get()
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="존재하지 않는 유저입니다.")
+        
+        # 비밀번호 해싱
+        hashed_password = hash_password(new_password)
+
+        # Firestore에 해싱한 비밀번호 저장
+        user_ref = user_doc[0].reference
+        user_ref.update({'password': hashed_password})
+
+        # 비밀번호 재설정 후 Firestore에서 토큰 삭제
+        db.collection('password_reset_tokens').document(token).delete()
+
+        return {"message": "비밀번호가 성공적으로 변경되었습니다."}
+    except SignatureExpired:
+        raise HTTPException(status_code=400, detail = "토큰이 만료되었습니다.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"비밀번호를 재설정하는 중 오류가 발생했습니다: {str(e)}")
+
+# # 유저 검색
+# @router.get("/users/{name}")
+# def get_user(name: str):
+#     doc_ref = db.collection("users").where('name','==', name)
+#     doc = doc_ref.stream()
+
+#     if doc.exists:
+#         return doc.to_dict()
+#     else:
+#         raise HTTPException(status_code=404, detail="존재하지 않는 유저입니다.")
     
 # 검색
 @router.get("/search")
@@ -177,10 +217,26 @@ def search_resources():
     return {"message": "Search"}
 
 # 학습목록 조회 
-@router.get("/study")
-def study_progress():
+@router.get("/study/{user_id}")
+def study_progress(user_id: str):
+    try:
+        # Firestore에서 유저의 UID로 연결된 학습 목록 가져오기
+        study_ref = db.collection('study').where('user_id', '==', user_id)
+        study_docs = study_ref.stream()
+        
+        # 학습 목록을 저장할 리스트 생성
+        study_list = []
+        
+        for doc in study_docs:
+            study_data = doc.to_dict()
+            study_data['id'] = doc.id  # 문서 ID를 추가
+            study_list.append(study_data)
+        
+        return {"studies": study_list}
 
-    return {"message": "Study"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"학습 목록을 가져오는 중 오류가 발생했습니다: {str(e)}")
+
 
 # 파일 업로드
 # todo: 최우선 순위임
