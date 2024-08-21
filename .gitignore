@@ -5,4 +5,4 @@ setup.ps1
 *.pyc
 __pycache__/
 .env
-firebase_set/serviceAccount.json
+firebase_set/service_account.json
