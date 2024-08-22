@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, Form, Request
+from fastapi import APIRouter, HTTPException, Depends, Form, Request, Header
 from firebase_set import auth, firestore
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
@@ -40,9 +40,31 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {str(e)}")
 
 @router.get("/")
-def home_page():
+def home_page(authorization: str = Header(None)):
     # 메인 페이지(첫화면)은 현재 학습 중인 목록, 학습 목록 출력
-    return {"message": "welcome to Tharm"}
+    try:
+        if authorization:
+            token = authorization.split(" ")[1]
+            user = auth.verify_id_token(token)
+            user_ref = db.collection('users').document(user['uid'])
+            user_doc = user_ref.get()
+            user_data = user_doc.to_dict()
+
+            if not user_doc.exists:
+                raise HTTPException(status_code = 404, detail = "사용자를 찾을 수 없습니다.")
+            
+            # 메인화면에 필요한 정보 넘김
+            study_ref = db.collection('study').where('user_id','==',user['uid']).order_by('created_at',direction=firestore.Query.DESCENDING).limit(1)
+            study_docs = study_ref.stream()
+            stduy_data = study_docs.to_dict()
+
+
+            return {"message": f"welcome {user_data.get('name')}!, Last study is {stduy_data.get('name')}, and progress is {stduy_data.get('status')}"}
+        else:
+            raise HTTPException(status_code=401, detail = "로그인을 안했어요")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"홈페이지 로드 중 오류: {str(e)}")
+
 
 # 회원가입
 @router.post("/create/user")
@@ -236,7 +258,6 @@ def study_progress(user_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"학습 목록을 가져오는 중 오류가 발생했습니다: {str(e)}")
-
 
 # 파일 업로드
 # todo: 최우선 순위임
