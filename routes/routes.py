@@ -1,20 +1,23 @@
-from fastapi import APIRouter, HTTPException, Depends, Form, Request, Header
-from firebase_set import auth, firestore
+from fastapi import APIRouter, FastAPI, HTTPException, Depends
+from firebase_set import auth, db
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-from schemas.schemas import UserSchema, Token, VideoSchema
+from schemas.schemas import UserSchema, Token, VideoSchema, StudySchema
 from fastapi.encoders import jsonable_encoder
+from typing import List
 from datetime import datetime
+from controller import video_controller, resource_controller, study_controller, seeder
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from uuid import UUID
 from services.emailutils import send_reset_email, generate_reset_pwtoken, get_email_from_pwtoken
 from itsdangerous import SignatureExpired
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 
-# 라우터 생성
+app = FastAPI()
 router = APIRouter()
-
-# Firebase Firestore 클라이언트 연결
-db = firestore.client()
+resourceController = resource_controller()
+studyController = study_controller()
 
 # 템플릿 디렉터리 설정
 templates = Jinja2Templates(directory="templates")
@@ -165,6 +168,7 @@ def reset_password(data: UserSchema):
     try:
         # Firebase Authentication을 사용하여 비밀번호 재설정 링크를 이메일로 전송
         # Todo: 재설정 메일 테스트 필요
+
         email = data.email
 
         # 이메일이 유효한지 확인
@@ -303,10 +307,10 @@ def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
 
 # 파일 업로드
 # todo: 최우선 순위임
-@router.get("/resource")
-def get_resource():
+#@router.get("/resource")
+#def get_resource():
     #pdf, 사진 파일 업로드 기능 구현 -> 문장 추출 -> 오차율 확인 및 저장 구현하기
-    return {"message": "Resource"}
+#    return {"message": "Resource"}
 
 #영상 저장
 @router.post("/video")
@@ -323,8 +327,16 @@ def create_video(video: VideoSchema):
 def get_video(video_id: str):
     ref = db.collection("video").document(video_id)
     doc = ref.get()
-    if doc.exists:
+    if doc.exists():
         return doc.to_dict()
     else:
-        raise HTTPException(status_code=404, detail="영상을 찾을 수 없습니다.")
-    
+        raise HTTPException(status_code=404, detail="Video not found.")
+
+@router.post("/videos/update")
+async def update_videos():
+    return await video_controller.update_videos()
+
+async def lifespan(app: FastAPI):
+    # 애플리케이션이 시작될 때 실행
+    await seeder.seed_data()
+    yield {"message":"시더 처리 완료, 애플리케이션 종료~~"}

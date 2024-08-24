@@ -1,16 +1,8 @@
 import firebase_admin
-from firebase_admin import credentials, auth, firestore
-from config.config import settings
+from firebase_admin import auth, firestore, storage
 
-def initialize_firebase():
-    try:
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(settings.FIREBASE_JSON)
-            firebase_admin.initialize_app(cred)
-    except Exception as e:
-        print(f"Error initializing Firebase: {e}")
-        raise
-
-initialize_firebase()
+firebase_admin.initialize_app()
+db = firestore.client()
+bucket = storage.bucket()
 
 __all__ = ["auth", "firestore"]

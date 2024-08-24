@@ -1,8 +1,5 @@
-from google.cloud import firestore
+from firebase_set import db
 from datetime import datetime
-from typing import Optional
-
-db = firestore.Client()
 
 class UserModel:
     def __init__(self, id: str, name: str, email: str, created_at: datetime):
