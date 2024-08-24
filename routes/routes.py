@@ -270,6 +270,36 @@ def study_progress(user_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"학습 목록을 가져오는 중 오류가 발생했습니다: {str(e)}")
+    
+# 학습목록에서 삭제
+@router.delete("/study/delete ")
+def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
+    user = get_current_user(token)
+    user_id = user.uid  # 토큰에서 추출한 UID
+    
+    try:
+        # 특정 사용자에 대한 학습 중 주어진 SID 목록에 해당하는 학습 문서들을 가져오기
+        study_ref = db.collection('study')
+        query = study_ref.where('user_id', '==', user_id).where('study_id', 'in', study_ids)
+        study_docs = query.stream()
+
+        # deleted_study_names = [] # 삭제된 학습의 이름을 저장할 리스트
+
+        for doc in study_docs:
+            study_data = doc.to_dict()
+            deleted_study_names.append(study_data.get('name'))  # 학습 이름 저장
+            doc.reference.delete()  # 문서 삭제
+
+        if not deleted_study_names:
+            raise HTTPException(status_code=404, detail="No studies found matching the provided IDs")
+
+        return {"message": f"Deleted {deleted_count} studies successfully"}
+
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred while deleting studies: {str(e)}")
+
 
 # 파일 업로드
 # todo: 최우선 순위임
