@@ -45,8 +45,7 @@ def home_page(authorization: str = Header(None)):
     try:
         if authorization:
             token = authorization.split(" ")[1]
-            user = auth.verify_id_token(token)
-            user_ref = db.collection('users').document(user['uid'])
+            user_ref = get_current_user(token)
             user_doc = user_ref.get()
             user_data = user_doc.to_dict()
 
@@ -54,12 +53,25 @@ def home_page(authorization: str = Header(None)):
                 raise HTTPException(status_code = 404, detail = "사용자를 찾을 수 없습니다.")
             
             # 메인화면에 필요한 정보 넘김
-            study_ref = db.collection('study').where('user_id','==',user['uid']).order_by('created_at',direction=firestore.Query.DESCENDING).limit(1)
+            study_ref = db.collection('study').where('user_id','==',user_doc['uid']).order_by('created_at',direction=firestore.Query.DESCENDING).limit(1)
             study_docs = study_ref.stream()
             stduy_data = study_docs.to_dict()
 
+            # 광고 정보 넘기기
+            ads_ref = db.collection('AD')
+            ads_docs = ads_ref.stream()
 
-            return {"message": f"welcome {user_data.get('name')}!, Last study is {stduy_data.get('name')}, and progress is {stduy_data.get('status')}"}
+            ads_list = []
+
+            for doc in ads_docs:
+                ad_data = doc.to_dict()
+                ad_data['id'] = doc.id
+                ads_list.append(ad_data)
+
+
+            return {"user": f"welcome {user_data.get('name')}!",
+                    "last_study": f"Last study is {stduy_data.get('name')}, and progress is {stduy_data.get('status')}",
+                    "advertisement": f"advertisement: {ads_list}"}
         else:
             raise HTTPException(status_code=401, detail = "로그인을 안했어요")
     except Exception as e:
@@ -183,10 +195,10 @@ def reset_password(data: UserSchema):
 def reset_password_form(request: Request, token: str):
     try:
         # 토큰 검증 (유효 시간 검사)
-        email = get_email_from_pwtoken(token)
+        get_email_from_pwtoken(token)
 
         # 검증된 토큰과 함께 비밀번호 재설정 폼 렌더링
-        return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+        return templates.TemplateResponse("reset_password.html")
 
     except SignatureExpired:
         raise HTTPException(status_code=400, detail="토큰이 만료되었습니다.")
@@ -194,7 +206,7 @@ def reset_password_form(request: Request, token: str):
         raise HTTPException(status_code=400, detail=f"토큰 검증 중 오류가 발생했습니다: {str(e)}")
 
 # 비밀번호 교체 후 firestore에 업데이트
-@router.post("/reset-password")
+@router.patch("/reset-password")
 def complete_reset_password(token: str = Form(...), new_password: str = Form(...)):
     try:
         # 토큰에서 이메일 추출
