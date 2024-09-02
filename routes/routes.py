@@ -10,6 +10,19 @@ from datetime import datetime
 from controller import video_controller, resource_controller, study_controller, seeder
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from uuid import UUID
+from services.emailutils import send_reset_email, generate_reset_pwtoken, get_email_from_pwtoken
+from itsdangerous import SignatureExpired
+from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse
+import os
+from dotenv import load_dotenv
+import requests
+
+# .env 파일의 환경 변수를 로드
+load_dotenv()
+
+FIREBASE_API = os.getenv('FIREBASE_API')
+
 
 app = FastAPI()
 router = APIRouter()
@@ -37,7 +50,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {str(e)}")
 
 @router.get("/")
-def home_page(authorization: str = Header(None)):
+def home_page():
     # 메인 페이지(첫화면)은 현재 학습 중인 목록, 학습 목록 출력
     try:
         if authorization:
@@ -79,7 +92,7 @@ def home_page(authorization: str = Header(None)):
 @router.post("/create/user")
 async def create_new_user(create_user: UserSchema):
     try:
-        hashed_password = hash_password(create_user.password) #해쉬처리한 비밀번호로 저장
+        # hashed_password = hash_password(create_user.password) #해쉬처리한 비밀번호로 저장
         # 이후 비밀번호 찾기 시엔 이메일 체크 후 비밀번호 재설정으로 넘기기
         # 비밀번호 원본 데이터는 우리도 모르기 때문
         
@@ -88,14 +101,15 @@ async def create_new_user(create_user: UserSchema):
             "email": create_user.email,
             "name": create_user.name,
             "phone": create_user.phone,
-            "password": hashed_password,
             "created_at": format_datetime(create_user.created_at) if create_user.created_at else None,
         }
 
         # Firebase Authentication에 사용자 생성 (비밀번호는 저장되지 않음)
         user_record = auth.create_user(
             email=create_user.email,
+            password = create_user.password,
             display_name=create_user.name,
+            phone_number = create_user.phone,
             disabled=False
         )
         
@@ -108,37 +122,55 @@ async def create_new_user(create_user: UserSchema):
 
 # 로그인
 @router.post("/user/login", response_model=Token)
-def login(data: UserSchema):
+async def login(data: UserSchema):
     try:
-        # Firebase Admin SDK로 사용자 찾기
-        user = auth.get_user_by_email(data.email)
+        # Firebase Authentication REST API를 통해 로그인
+        firebase_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API}"
+        payload = {
+            "email": data.email,
+            "password": data.password,
+            "returnSecureToken": True
+        }
+        response = requests.post(firebase_url, json=payload)
+        response_data = response.json()
         
-        if not user:
+        if response.status_code != 200:
             raise HTTPException(status_code=400, detail="이메일 또는 비밀번호가 유효하지 않습니다.")
+        
+        # ID 토큰 반환
+        id_token = response_data['idToken']
+
+        # ID 토큰에서 UID 추출
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
 
         # Firestore에서 사용자 데이터 가져오기
-        user_ref = db.collection('users').document(user.uid)
+        user_ref = db.collection('users').document(uid)
         user_doc = user_ref.get()
 
         if not user_doc.exists:
             raise HTTPException(status_code=400, detail="사용자가 존재하지 않습니다.")
 
-        user_data = user_doc.to_dict()
-        hashed_password = user_data.get('password')  # 키 이름을 'password'로 사용
+        return Token(access_token= id_token, token_type = "Bearer")
+    
+        # firebase Authentication을 사용하면서 자체 토큰을 사용하지 않아도 된다.
+        # user_data = user_doc.to_dict()
+        # hashed_password = user_data.get('password')  # 키 이름을 'password'로 사용
 
         # 비밀번호 검증
-        if not pwd_context.verify(data.password, hashed_password):
-            raise HTTPException(status_code=400, detail="이메일 또는 비밀번호가 유효하지 않습니다.")
+        # if not pwd_context.verify(data.password, hashed_password):
+        #     raise HTTPException(status_code=400, detail="이메일 또는 비밀번호가 유효하지 않습니다.")
 
         # 비밀번호가 일치하면 커스텀 토큰 생성
-        custom_token = auth.create_custom_token(user.uid)
+        # custom_token = auth.create_custom_token(user.uid)
         
         # Token 스키마로 반환
-        return Token(access_token=custom_token.decode('utf-8'), token_type="Bearer")
+        # return Token(access_token=custom_token.decode('utf-8'), token_type="Bearer")
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+# Todo: 아이디 찾는거 휴대폰번호랑 이름으로 찾기
 #아이디, 비밀번호 찾기
 @router.get("/find/id")
 def find_user(user_id:str):
@@ -156,6 +188,7 @@ def find_user(user_id:str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Todo: 비밀번호 이메일 요청으로 변경
 # 비밀번호 재설정 요청
 @router.post("/find/reset-password")
 def reset_password(data: UserSchema):
