@@ -1,10 +1,11 @@
-from fastapi import APIRouter, FastAPI, HTTPException, Depends
 from firebase_set import auth, db
 from fastapi.security import OAuth2PasswordBearer
 from schemas.schemas import UserSchema, Token, VideoSchema
 from fastapi.encoders import jsonable_encoder
+from typing import List
 from datetime import datetime
 from controller import video_controller, resource_controller, study_controller, seeder
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from services.emailutils import send_reset_email, generate_reset_pwtoken, get_email_from_pwtoken
 from itsdangerous import SignatureExpired
 from fastapi.templating import Jinja2Templates
@@ -339,7 +340,6 @@ def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while deleting studies: {str(e)}")
 
-
 #파일 업로드
 #pdf 파일 업로드 기능 구현 -> 문장 추출 -> 오차율 확인 및 저장 구현하기
 @router.post("/resources/")
@@ -348,7 +348,6 @@ async def create_resource(user_id: uuid4, study_id: uuid4, file: UploadFile = Fi
         raise HTTPException(status_code=400, detail="파일 타입이 안맞당")
     
     file_content = await file.read()
-
     resource = resourceController.process_file(user_id, study_id, file_content, file.filename)
     
     return resource, {"message":"업로드 완료"}
