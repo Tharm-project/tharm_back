@@ -3,9 +3,13 @@ from fastapi.security import OAuth2PasswordBearer
 from firebase_admin import auth as firebase_auth
 from firebase_set import db
 from routes import user_routes, video_routes, study_routes
+import settings
 
 # FastAPI 인스턴스 생성
 app = FastAPI()
+
+# Firebase 초기화 (필요한 경우)
+settings.initialize_firebase()
 
 # firebase authentication으로 토큰을 확인하고 없으면 user/login으로 넘어가게 만든다.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
@@ -62,6 +66,6 @@ async def home_page(user: firebase_auth.UserRecord = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"홈페이지 로드 중 오류: {str(e)}")
 
 # routes 쪼개기 및 dependencies를 통해 토큰 확인 함수 적용
-app.include_router(user_routes, prefix="/user", tags=["User"], dependencies=[Depends(get_current_user)])
-app.include_router(video_routes, prefix="/videos", tags=["Videos"], dependencies=[Depends(get_current_user)])
-app.include_router(study_routes, prefix="/studies", tags=["Studies"], dependencies=[Depends(get_current_user)])
+app.include_router(user_routes.router, prefix="/user", tags=["User"])
+app.include_router(video_routes.router, prefix="/videos", tags=["Videos"], dependencies=[Depends(get_current_user)])
+app.include_router(study_routes.router, prefix="/studies", tags=["Studies"], dependencies=[Depends(get_current_user)])

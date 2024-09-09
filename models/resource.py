@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 from uuid import uuid4
-from ..schemas.schemas import ResourceSchema
+from schemas.schemas import ResourceSchema
 
 class ResourceModel:
     def __init__(self):

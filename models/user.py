@@ -38,7 +38,7 @@ class UserModel:
         else:
             raise ValueError('User not found')
 
-    def get_user(db, id: str):
-     if id in db:
-        return UserModel(**db[id])
+    # def get_user(db, id: str):
+    #  if id in db:
+    #     return UserModel(**db[id])
     

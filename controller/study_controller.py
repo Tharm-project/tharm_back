@@ -1,10 +1,9 @@
 
 from uuid import uuid4
-from datetime import datetime
 from datetime import datetime, timezone
 from typing import List, Dict
-from ..schemas.schemas import StudySchema
-from ..schemas.schemas import ResourceSchema
+from schemas.schemas import StudySchema
+from schemas.schemas import ResourceSchema
 
 class StudyController:
     def __init__(self):

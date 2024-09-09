@@ -72,7 +72,7 @@ async def login(data: UserSchema):
         raise HTTPException(status_code=400, detail=str(e))
 
 # 아이디(이메일) 검색
-@router.get("/find/id")
+@router.post("/find/id")
 def find_user(user_info: UserSearchSchema):
     try:
         # Firestore에서 사용자 이름과 전화번호로 사용자 검색
