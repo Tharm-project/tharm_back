@@ -33,7 +33,7 @@ async def home_page(user: firebase_auth.UserRecord = Depends(get_current_user)):
         user_name = user.display_name or user.email
 
         # Firestore 내림차순 쿼리 작성 및 실행 (Query 없이)
-        study_ref = db.collection('study').where('user_id', '==', user_id).order_by('created_at', direction='DESCENDING').limit(1)
+        study_ref = db.collection('study').filter('user_id', '==', user_id).order_by('created_at', direction='DESCENDING').limit(1)
         study_docs = study_ref.stream()
 
         # 학습 데이터 가져오기

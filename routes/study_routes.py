@@ -1,69 +1,31 @@
-from fastapi import APIRouter, HTTPException, Depends
-from schemas.schemas import UserSchema, Token
-import requests
-import os
-from firebase_set import auth, db
+from fastapi import APIRouter, HTTPException
+from firebase_set import db
 
 router = APIRouter()
 
-# Firebase API 키가 설정되어 있는지 확인
-FIREBASE_API = os.getenv('FIREBASE_API')
-if FIREBASE_API is None:
-    raise ValueError("FIREBASE_API environment variable is not set")
-
-@router.post("/create")
-async def create_new_user(create_user: UserSchema):
+@router.get("/{user_id}")
+def get_study_progress(user_id: str):
     try:
-        # 이메일과 비밀번호 필드가 있는지 확인
-        if not create_user.email or not create_user.password:
-            raise HTTPException(status_code=400, detail="Email and password are required")
+        study_ref = db.collection('study').filter('user_id', '==', user_id)
+        study_docs = study_ref.stream()
 
-        user_data = {
-            "email": create_user.email,
-            "name": create_user.name,
-            "phone": create_user.phone,
-            "created_at": create_user.created_at,
-        }
+        study_list = []
+        for doc in study_docs:
+            study_data = doc.to_dict()
+            study_data['id'] = doc.id
+            study_list.append(study_data)
 
-        # Firebase에서 사용자 생성
-        user_record = auth.create_user(
-            email=create_user.email,
-            password=create_user.password,
-            display_name=create_user.name,
-            phone_number=create_user.phone,
-            disabled=False,
-        )
-
-        # Firestore에 사용자 데이터 저장
-        db.collection('users').document(user_record.uid).set(user_data)
-        return {"message": "User created successfully", "user_data": user_data}
-
+        return {"studies": study_list}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error fetching study data: {str(e)}")
 
-@router.post("/login", response_model=Token)
-async def login(data: UserSchema):
+@router.delete("/delete")
+def delete_study(study_ids: list[str]):
     try:
-        firebase_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API}"
-        payload = {
-            "email": data.email,
-            "password": data.password,
-            "returnSecureToken": True
-        }
-        response = requests.post(firebase_url, json=payload)
+        study_ref = db.collection('study')
+        for study_id in study_ids:
+            study_ref.document(study_id).delete()
 
-        # Firebase 응답 처리
-        response_data = response.json()
-        if response.status_code != 200:
-            error_message = response_data.get('error', {}).get('message', 'Invalid email or password')
-            raise HTTPException(status_code=400, detail=error_message)
-
-        # idToken이 응답에 포함되어 있는지 확인
-        if 'idToken' not in response_data:
-            raise HTTPException(status_code=400, detail="Unable to retrieve idToken from Firebase")
-
-        id_token = response_data['idToken']
-        return Token(access_token=id_token, token_type="Bearer")
-
+        return {"message": f"Deleted {len(study_ids)} studies successfully"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error deleting studies: {str(e)}")
