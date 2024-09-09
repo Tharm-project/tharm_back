@@ -1,4 +1,4 @@
-from uuid import UUID4
+from uuid import uuid4
 from datetime import datetime
 from datetime import datetime, timezone
 from typing import List, Dict
@@ -7,8 +7,8 @@ from ..schemas.schemas import ResourceSchema
 
 class StudyController:
     def __init__(self):
-        self.study_db: Dict[UUID4, StudySchema] = {}
-        self.resource_db: Dict[UUID4, ResourceSchema] = {}
+        self.study_db: Dict[uuid4, StudySchema] = {}
+        self.resource_db: Dict[uuid4, ResourceSchema] = {}
 
     def add_resource(self, resource: ResourceSchema):
         self.resource_db[resource.id] = resource
@@ -30,7 +30,7 @@ class StudyController:
                 created_at=resource.created_at
             )
 
-    def get_study_list(self, user_id: UUID4) -> List[StudySchema]:
+    def get_study_list(self, user_id: uuid4) -> List[StudySchema]:
         # user_id가 일치하는 모든 Study를 반환
         return [study for study in self.study_db.values() if study.user_id == user_id]
 

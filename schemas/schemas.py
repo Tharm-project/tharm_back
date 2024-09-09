@@ -66,3 +66,12 @@ class ADSchema(BaseModel):
     click_num: int #클릭 수(추후 광고 받으면 사용)
     impressions: int #노출 수(추후 광고 받으면 사용)
     return_num: int #반환 수(추후 광고 받으면 사용)
+
+# 아이디 검색 스키마
+class UserSearchSchema(BaseModel):
+    name: str
+    phone: str
+
+# 패스워드 찾기 스키마
+class PasswordResetSchema(BaseModel):
+    email: str

@@ -1,15 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends, Form, Request, Header
 from fastapi import APIRouter, FastAPI, HTTPException, Depends
 from firebase_set import auth, db
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
-from schemas.schemas import UserSchema, Token, VideoSchema, StudySchema
+from schemas.schemas import UserSchema, Token, VideoSchema
 from fastapi.encoders import jsonable_encoder
-from typing import List
 from datetime import datetime
 from controller import video_controller, resource_controller, study_controller, seeder
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from uuid import UUID
 from services.emailutils import send_reset_email, generate_reset_pwtoken, get_email_from_pwtoken
 from itsdangerous import SignatureExpired
 from fastapi.templating import Jinja2Templates
@@ -17,6 +12,7 @@ from fastapi.responses import HTMLResponse
 import os
 from dotenv import load_dotenv
 import requests
+from uuid import uuid4
 
 # .env 파일의 환경 변수를 로드
 load_dotenv()
@@ -26,17 +22,31 @@ FIREBASE_API = os.getenv('FIREBASE_API')
 
 app = FastAPI()
 router = APIRouter()
-resourceController = resource_controller()
-studyController = study_controller()
+resourceController = resource_controller.ResourceController()
+studyController = study_controller.StudyController()
+
+# 템플릿 디렉터리 설정
+templates = Jinja2Templates(directory="templates")
 
 #datetime format set
 def format_datetime(dt: datetime) -> str:
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 # 비밀번호 Hash 처리
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# def hash_password(password: str) -> str:
+#     return pwd_context.hash(password)
+
+# 비밀번호 검증
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
+# async def get_current_user(token: str = Depends(oauth2_scheme)):
+#     try:
+#         # 토큰 검증
+#         decoded_token = auth.verify_id_token(token)
+#         user = auth.get_user(decoded_token['uid'])
+#         return user
+#     except Exception as e:
+#         raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {str(e)}")
 
 # 비밀번호 검증
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
@@ -170,7 +180,6 @@ async def login(data: UserSchema):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# Todo: 아이디 찾는거 휴대폰번호랑 이름으로 찾기
 #아이디, 비밀번호 찾기
 @router.get("/find/id")
 def find_user(user_id:str):
@@ -188,15 +197,33 @@ def find_user(user_id:str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Todo: 비밀번호 이메일 요청으로 변경
 # 비밀번호 재설정 요청
 @router.post("/find/reset-password")
 def reset_password(data: UserSchema):
     try:
         # Firebase Authentication을 사용하여 비밀번호 재설정 링크를 이메일로 전송
         # Todo: 재설정 메일 테스트 필요
+
+        email = data.email
+
+        # 이메일이 유효한지 확인
+        if not auth.get_user_by_email(email):
+            raise HTTPException(status_code=400, detail="존재하지 않는 유저입니다.")
         
-        auth.send_password_reset_email(data.email)
+        # 비밀번호용 토큰 생성
+        token = generate_reset_pwtoken(email)
+
+        # Firestore에 토큰 저장
+        token_data = {
+            "email": email,
+            "token": token,
+            "creaeted_at": datetime.utcnow()
+        }
+        db.collection('password_reset_tokens').document(token).set(token_data)
+
+        # 이메일 발송 -> 환경설정 파일에 이메일 넣어둘것
+        send_reset_email(email, token)
+
         return {"message": "비밀번호 재설정 메일을 발송하였습니다."}
 
     except Exception as e:
@@ -230,11 +257,11 @@ def complete_reset_password(token: str = Form(...), new_password: str = Form(...
             raise HTTPException(status_code=404, detail="존재하지 않는 유저입니다.")
         
         # 비밀번호 해싱
-        hashed_password = hash_password(new_password)
+        #hashed_password = hash_password(new_password)
 
         # Firestore에 해싱한 비밀번호 저장
         user_ref = user_doc[0].reference
-        user_ref.update({'password': hashed_password})
+        #user_ref.update({'password': hashed_password})
 
         # 비밀번호 재설정 후 Firestore에서 토큰 삭제
         db.collection('password_reset_tokens').document(token).delete()
@@ -295,7 +322,7 @@ def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
         query = study_ref.where('user_id', '==', user_id).where('study_id', 'in', study_ids)
         study_docs = query.stream()
 
-        # deleted_study_names = [] # 삭제된 학습의 이름을 저장할 리스트
+        deleted_study_names = [] # 삭제된 학습의 이름을 저장할 리스트
 
         for doc in study_docs:
             study_data = doc.to_dict()
@@ -316,7 +343,7 @@ def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
 #파일 업로드
 #pdf 파일 업로드 기능 구현 -> 문장 추출 -> 오차율 확인 및 저장 구현하기
 @router.post("/resources/")
-async def create_resource(user_id: UUID, study_id: UUID, file: UploadFile = File(...)):
+async def create_resource(user_id: uuid4, study_id: uuid4, file: UploadFile = File(...)):
     if file.content_type not in ["application/pdf"]:
         raise HTTPException(status_code=400, detail="파일 타입이 안맞당")
     
@@ -348,5 +375,3 @@ async def lifespan(app: FastAPI):
     # 애플리케이션이 시작될 때 실행
     await seeder.seed_data()
     yield {"message":"시더 처리 완료, 애플리케이션 종료~~"}
-
-
