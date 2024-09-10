@@ -1,7 +1,6 @@
 import os
 import smtplib
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from itsdangerous import URLSafeTimedSerializer

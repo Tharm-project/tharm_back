@@ -3,6 +3,7 @@ from pydantic import UUID4
 from fastapi import HTTPException
 from firebase_admin import firestore, storage
 import requests
+import httpx
 import os
 
 db = firestore.client()
@@ -46,29 +47,37 @@ def save_video_directly_to_firebase(video_data):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def update_videos():
+async def update_videos(text: str):
     try:
         # AI 모델로부터 데이터 수신
         #todo: ai_data는 성윤님께서 전달 주실 값 예제입니다
         #일단 정말 대강 만들었읍니다. 모양은 달라도 괜찮아요!
-        ai_data = [
-            {"title": "시(poem)", "url": "어쩌구저쩌구11.mp4", "total_time": 2100},
-            {"title": "노래(song)", "url": "exampl22.mp4", "total_time": 1800},
-            {"title": "영화(movie)", "url": "movie123.mp4", "total_time": 2400},
-        ]
-        
-        for data in ai_data:
-            title_ref = data['title']
-            url_ref = data['url']
-            total_time = data['total_time']
+
+        ### AI 모델에 데이터 수신
+        # AI 서버 및 페이로드
+        ai_server = "히히"
+        payload = {"text": text} 
+
+        # http 요청
+        async with httpx.AsyncClient() as client:
+            response = await client.post(ai_server, json = payload)
+
+        # 응답 확인
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="AI 서버 응답 오류")
+
+        ai_data = response.json()
 
         new_video = {
             "id": UUID4(),
             # "study_id": UUID4(),
             # "resource_id": UUID4(),
-            "title": title_ref,
-            "url": url_ref,
-            "total_time": total_time,
+            "url": ai_data.url,
+            "title": ai_data.title,
+            "total_time": ai_data.total_time,
+            "width": ai_data.width,
+            "height": ai_data.height,
+            "fps": ai_data.fps,
             "watch_status": False,
             "created_at": datetime.now(timezone.utc)
         }
