@@ -5,6 +5,7 @@ import requests
 import os
 from firebase_set import auth, db
 from services.emailutils import send_reset_email
+from datetime import datetime
 
 
 router = APIRouter()
@@ -25,16 +26,13 @@ async def create_new_user(create_user: UserSchema):
             "email": create_user.email,
             "name": create_user.name,
             "phone": create_user.phone,
-            "created_at": create_user.created_at,
+            "created_at": datetime.now(timezone.utc),
         }
 
         # Firebase에서 사용자 생성
         user_record = auth.create_user(
             email=create_user.email,
             password=create_user.password,
-            display_name=create_user.name,
-            phone_number=create_user.phone,
-            disabled=False,
         )
 
         # Firestore에 사용자 데이터 저장

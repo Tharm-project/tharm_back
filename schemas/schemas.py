@@ -4,7 +4,7 @@ from datetime import datetime
 
 # User 스키마
 class UserSchema(BaseModel):
-    id: UUID4
+    # id: UUID4
     name: str
     email: EmailStr
     password: str
