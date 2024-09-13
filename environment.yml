@@ -3,21 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bzip2=1.0.8=h6c40b1e_6
-  - ca-certificates=2024.7.2=hecd8cb5_0
-  - libffi=3.4.4=hecd8cb5_1
-  - ncurses=6.4=hcec6c5f_0
-  - openssl=3.0.15=h46256e1_0
-  - pip=24.2=py310hecd8cb5_0
-  - python=3.10.14=h5ee71fb_1
-  - readline=8.2=hca72f7f_0
-  - setuptools=72.1.0=py310hecd8cb5_0
-  - sqlite=3.45.3=h6c40b1e_0
-  - tk=8.6.14=h4d00af3_0
-  - tzdata=2024a=h04d1e81_0
-  - wheel=0.43.0=py310hecd8cb5_0
-  - xz=5.4.6=h6c40b1e_1
-  - zlib=1.2.13=h4b97444_1
+  - python=3.10.14
   - pip:
       - absl-py==2.1.0
       - aiohappyeyeballs==2.4.0
@@ -36,7 +22,11 @@ dependencies:
       - email-validator==2.2.0
       - exceptiongroup==1.2.2
       - fastapi==0.114.0
+      - fastapi-cli==0.0.5
+      - filelock==3.16.0
       - firebase-admin==6.5.0
+      - frozenlist==1.4.1
+      - fsspec==2024.9.0
       - google-api-core==2.19.2
       - google-api-python-client==2.145.0
       - google-auth==2.34.0
@@ -48,7 +38,6 @@ dependencies:
       - google-resumable-media==2.7.2
       - googleapis-common-protos==1.65.0
       - grpcio==1.66.1
-      - grpcio-status==1.66.1
       - h11==0.14.0
       - h5py==3.11.0
       - httpcore==1.0.5
@@ -63,8 +52,6 @@ dependencies:
       - pdfminer-six==20231228
       - pdfplumber==0.11.4
       - pillow==10.4.0
-      - proto-plus==1.24.0
-      - protobuf==5.28.0
       - pyasn1==0.6.1
       - pyasn1-modules==0.4.1
       - pycparser==2.22
@@ -81,13 +68,7 @@ dependencies:
       - soupsieve==2.6
       - starlette==0.38.5
       - sympy==1.13.1
-      - tensorboard==2.17.0
-      - tensorboard-data-server==0.7.2
-      - tensorflow==2.17.0
-      - tensorflow-intel==2.17.0
-      - tensorflow-io-gcs-filesystem==0.31.0
       - termcolor==2.4.0
-      - tf-keras==2.17.0
       - threadpoolctl==3.5.0
       - tinydb==4.8.0
       - tokenizers==0.19.1
@@ -100,4 +81,3 @@ dependencies:
       - werkzeug==3.0.3
       - wrapt==1.16.0
       - yarl==1.9.7
-

@@ -5,4 +5,4 @@ setup.ps1
 *.pyc
 __pycache__/
 .env
-firebase_set/tharm-16f63-firebase-adminsdk-ir9sb-fc5140cab4.json
+firebase_set/service_account.json
