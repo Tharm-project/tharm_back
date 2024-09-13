@@ -33,12 +33,12 @@ class StudyModel:
         }    
 
     def save(self):
-        doc_ref = db.collection('studies').document(self.id)
+        doc_ref = db.collection('study').document(self.id)
         doc_ref.set(self.to_dict())
     
     @staticmethod
     def get(study_id: str): 
-        doc_ref = db.collection('studies').document(study_id)
+        doc_ref = db.collection('study').document(study_id)
         ref = doc_ref.get()
         if ref.exists:
             return StudyModel.from_firestore(ref)

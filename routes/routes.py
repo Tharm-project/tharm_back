@@ -1,11 +1,12 @@
 from firebase_set import auth, db
 from fastapi.security import OAuth2PasswordBearer
-from schemas.schemas import UserSchema, Token, VideoSchema
+from passlib.context import CryptContext
+from schemas.schemas import UserSchema, Token
 from fastapi.encoders import jsonable_encoder
 from typing import List
 from datetime import datetime
-from controller import video_controller, resource_controller, study_controller, seeder
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from controller import study_controller
+from fastapi import FastAPI, APIRouter, HTTPException
 from services.emailutils import send_reset_email, generate_reset_pwtoken, get_email_from_pwtoken
 from itsdangerous import SignatureExpired
 from fastapi.templating import Jinja2Templates
@@ -20,10 +21,8 @@ load_dotenv()
 
 FIREBASE_API = os.getenv('FIREBASE_API')
 
-
 app = FastAPI()
 router = APIRouter()
-resourceController = resource_controller.ResourceController()
 studyController = study_controller.StudyController()
 
 # 템플릿 디렉터리 설정
@@ -156,7 +155,9 @@ async def login(data: UserSchema):
         uid = decoded_token['uid']
 
         # Firestore에서 사용자 데이터 가져오기
-        user_ref = db.collection('users').document(uid)
+
+        # user_ref = db.collection('users').document(user.uid)
+        user_ref = db.collection('user').document(uid)
         user_doc = user_ref.get()
 
         if not user_doc.exists:
@@ -185,7 +186,7 @@ async def login(data: UserSchema):
 @router.get("/find/id")
 def find_user(user_id:str):
     try:
-        doc_ref = db.collection("users").document(user_id)
+        doc_ref = db.collection('user').document(user_id)
         user_doc = doc_ref.get()
 
         if not user_doc.exists:
@@ -253,7 +254,7 @@ def complete_reset_password(token: str = Form(...), new_password: str = Form(...
         email = get_email_from_pwtoken(token)
 
         # Firestore에서 사용자 데이터 가져오기
-        user_doc = db.collection('users').filter('email', '==', email).get()
+        user_doc = db.collection('user').filter('email', '==', email).get()
         if not user_doc:
             raise HTTPException(status_code=404, detail="존재하지 않는 유저입니다.")
         
@@ -276,7 +277,7 @@ def complete_reset_password(token: str = Form(...), new_password: str = Form(...
 # # 유저 검색
 # @router.get("/users/{name}")
 # def get_user(name: str):
-#     doc_ref = db.collection("users").filter('name','==', name)
+#     doc_ref = db.collection('user').filter('name','==', name)
 #     doc = doc_ref.stream()
 
 #     if doc.exists:
@@ -339,38 +340,3 @@ def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
         raise http_err
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred while deleting studies: {str(e)}")
-
-#파일 업로드
-#pdf 파일 업로드 기능 구현 -> 문장 추출 -> 오차율 확인 및 저장 구현하기
-@router.post("/resources/")
-async def create_resource(user_id: uuid4, study_id: uuid4, file: UploadFile = File(...)):
-    if file.content_type not in ["application/pdf"]:
-        raise HTTPException(status_code=400, detail="파일 타입이 안맞당")
-    
-    file_content = await file.read()
-    resource = resourceController.process_file(user_id, study_id, file_content, file.filename)
-    
-    return resource, {"message":"업로드 완료"}
-
-@router.post("/videos")
-async def create_video(video: VideoSchema):
-    await video_controller.create_video(video.model_dump())
-    return {"message": "Video saved successfully!"}
-
-@router.get("/videos/{video_id}")
-async def get_video(video_id: str):
-    ref = db.collection("videos").document(video_id)
-    doc = ref.get()
-    if doc.exists():
-        return doc.to_dict()
-    else:
-        raise HTTPException(status_code=404, detail="Video not found.")
-
-@router.post("/videos/update")
-async def update_videos():
-    return await video_controller.update_videos()
-
-async def lifespan(app: FastAPI):
-    # 애플리케이션이 시작될 때 실행
-    await seeder.seed_data()
-    yield {"message":"시더 처리 완료, 애플리케이션 종료~~"}

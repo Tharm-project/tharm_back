@@ -26,12 +26,12 @@ class UserModel:
         }
 
     def save(self):
-        doc_ref = db.collection('users').document(self.id)
+        doc_ref = db.collection('user').document(self.id)
         doc_ref.set(self.to_dict())
 
     @staticmethod
     def get(user_id: str):
-        doc_ref = db.collection('users').document(user_id)
+        doc_ref = db.collection('user').document(user_id)
         doc = doc_ref.get()
         if doc.exists:
             return UserModel.from_firestore(doc)

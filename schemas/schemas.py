@@ -40,7 +40,7 @@ class ResourceSchema(BaseModel):
 class SearchSchema(BaseModel):
     id: UUID4
     user_id: UUID4
-    resurec_id:UUID4
+    resource_id:UUID4
     query: str #검색 문장
     date: datetime #조회 일자
 
@@ -48,7 +48,7 @@ class SearchSchema(BaseModel):
 class VideoSchema(BaseModel):
     id: UUID4
     study_id: UUID4
-    resurece_id: UUID4
+    resource_id: UUID4
     title: str #영상 제목
     url: str
     total_time: int #총 재생시간

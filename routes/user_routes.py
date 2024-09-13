@@ -5,7 +5,7 @@ import requests
 import os
 from firebase_set import auth, db
 from services.emailutils import send_reset_email
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 router = APIRouter()
@@ -36,7 +36,7 @@ async def create_new_user(create_user: UserSchema):
         )
 
         # Firestore에 사용자 데이터 저장
-        db.collection('users').document(user_record.uid).set(user_data)
+        db.collection('user').document(user_record.uid).set(user_data)
         return {"message": "User created successfully", "user_data": user_data}
 
     except Exception as e:
@@ -74,7 +74,7 @@ async def login(data: UserSchema):
 def find_user(user_info: UserSearchSchema):
     try:
         # Firestore에서 사용자 이름과 전화번호로 사용자 검색
-        doc_ref = db.collection("users").filter('name', '==', user_info.name).filter('phone', '==', user_info.phone)
+        doc_ref = db.collection('user').filter('name', '==', user_info.name).filter('phone', '==', user_info.phone)
         user_docs = doc_ref.stream()
 
         user_data = None

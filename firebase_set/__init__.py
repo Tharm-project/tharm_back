@@ -1,6 +1,10 @@
+import os
+from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import storage, credentials, firestore, auth
-import os
+
+# .env 파일 로드
+load_dotenv()
 
 def initialize_firebase():
     try:
@@ -13,7 +17,7 @@ def initialize_firebase():
             if cred_path:
                 cred = credentials.Certificate(cred_path)
                 firebase_admin.initialize_app(cred, {
-                    'storageBucket': 'your-bucket-name.appspot.com'  # 실제 버킷 이름으로 변경
+                    'storageBucket': 'gs://tharm-16f63.appspot.com'  # 실제 버킷 이름으로 변경
                 })
                 print("Firebase 초기화 완료!")
             else:
