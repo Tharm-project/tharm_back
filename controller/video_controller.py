@@ -3,7 +3,9 @@ from pydantic import UUID4
 from fastapi import HTTPException
 from firebase_admin import firestore, storage
 from kiwipiepy import Kiwi
+import requests
 import httpx
+import os
 
 db = firestore.client()
 bucket = storage.bucket()  # Firebase Storage 버킷 객체
@@ -36,8 +38,8 @@ async def new_videos_save(text: str):
 
         new_video = {
             "id": UUID4(),
-            "study_id": UUID4(),
-            "resource_id": UUID4(),
+            # "study_id": UUID4(),
+            # "resource_id": UUID4(),
             "url": ai_data.url,
             "title": ai_data.title,
             "total_time": ai_data.total_time,

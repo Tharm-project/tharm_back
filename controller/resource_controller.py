@@ -2,12 +2,11 @@ import io
 import re
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
-from typing import List
 from kiwipiepy import Kiwi
 import pdfplumber
 from pydantic import ValidationError
-from ..models.resource import ResourceModel
-from ..schemas.schemas import ResourceSchema
+from models.resource import ResourceModel
+from schemas.schemas import ResourceSchema
 from fastapi import HTTPException
 
 class ResourceController:

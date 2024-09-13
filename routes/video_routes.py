@@ -17,10 +17,13 @@ def create_video(video: VideoSchema):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"##Error saving video: {str(e)}")
 
+
 #영상 출력
 @router.get("/{video_id}")
 def get_video(video_id: str):
+
     ref = db.collection('video').document(video_id)
+
     doc = ref.get()
     if doc.exists():
         return doc.to_dict()
@@ -44,4 +47,3 @@ async def update_videos(title: str, video: VideoSchema):
         return {"message": "영상 데이터 업데이트 성공!"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"##Error updating video: {str(e)}")
-

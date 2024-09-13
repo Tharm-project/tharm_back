@@ -1,4 +1,3 @@
-from fastapi import APIRouter, FastAPI, HTTPException, Depends
 from firebase_set import auth, db
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
@@ -34,9 +33,20 @@ def format_datetime(dt: datetime) -> str:
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 # 비밀번호 Hash 처리
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# def hash_password(password: str) -> str:
+#     return pwd_context.hash(password)
+
+# 비밀번호 검증
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
+# async def get_current_user(token: str = Depends(oauth2_scheme)):
+#     try:
+#         # 토큰 검증
+#         decoded_token = auth.verify_id_token(token)
+#         user = auth.get_user(decoded_token['uid'])
+#         return user
+#     except Exception as e:
+#         raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {str(e)}")
 
 # 비밀번호 검증
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
@@ -50,7 +60,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail=f"Invalid authentication credentials: {str(e)}")
 
 @router.get("/")
-def home_page(authorization: str = Header(None)):
+def home_page():
     # 메인 페이지(첫화면)은 현재 학습 중인 목록, 학습 목록 출력
     try:
         if authorization:
@@ -63,7 +73,7 @@ def home_page(authorization: str = Header(None)):
                 raise HTTPException(status_code = 404, detail = "사용자를 찾을 수 없습니다.")
             
             # 메인화면에 필요한 정보 넘김
-            study_ref = db.collection('study').where('user_id','==',user_doc['uid']).order_by('created_at',direction=firestore.Query.DESCENDING).limit(1)
+            study_ref = db.collection('study').filter('user_id','==',user_doc['uid']).order_by('created_at',direction=firestore.Query.DESCENDING).limit(1)
             study_docs = study_ref.stream()
             stduy_data = study_docs.to_dict()
 
@@ -92,7 +102,7 @@ def home_page(authorization: str = Header(None)):
 @router.post("/create/user")
 async def create_new_user(create_user: UserSchema):
     try:
-        hashed_password = hash_password(create_user.password) #해쉬처리한 비밀번호로 저장
+        # hashed_password = hash_password(create_user.password) #해쉬처리한 비밀번호로 저장
         # 이후 비밀번호 찾기 시엔 이메일 체크 후 비밀번호 재설정으로 넘기기
         # 비밀번호 원본 데이터는 우리도 모르기 때문
         
@@ -101,14 +111,15 @@ async def create_new_user(create_user: UserSchema):
             "email": create_user.email,
             "name": create_user.name,
             "phone": create_user.phone,
-            "password": hashed_password,
             "created_at": format_datetime(create_user.created_at) if create_user.created_at else None,
         }
 
         # Firebase Authentication에 사용자 생성 (비밀번호는 저장되지 않음)
         user_record = auth.create_user(
             email=create_user.email,
+            password = create_user.password,
             display_name=create_user.name,
+            phone_number = create_user.phone,
             disabled=False
         )
         
@@ -121,13 +132,27 @@ async def create_new_user(create_user: UserSchema):
 
 # 로그인
 @router.post("/user/login", response_model=Token)
-def login(data: UserSchema):
+async def login(data: UserSchema):
     try:
-        # Firebase Admin SDK로 사용자 찾기
-        user = auth.get_user_by_email(data.email)
+        # Firebase Authentication REST API를 통해 로그인
+        firebase_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API}"
+        payload = {
+            "email": data.email,
+            "password": data.password,
+            "returnSecureToken": True
+        }
+        response = requests.post(firebase_url, json=payload)
+        response_data = response.json()
         
-        if not user:
+        if response.status_code != 200:
             raise HTTPException(status_code=400, detail="이메일 또는 비밀번호가 유효하지 않습니다.")
+        
+        # ID 토큰 반환
+        id_token = response_data['idToken']
+
+        # ID 토큰에서 UID 추출
+        decoded_token = auth.verify_id_token(id_token)
+        uid = decoded_token['uid']
 
         # Firestore에서 사용자 데이터 가져오기
         # user_ref = db.collection('users').document(user.uid)
@@ -137,18 +162,21 @@ def login(data: UserSchema):
         if not user_doc.exists:
             raise HTTPException(status_code=400, detail="사용자가 존재하지 않습니다.")
 
-        user_data = user_doc.to_dict()
-        hashed_password = user_data.get('password')  # 키 이름을 'password'로 사용
+        return Token(access_token= id_token, token_type = "Bearer")
+    
+        # firebase Authentication을 사용하면서 자체 토큰을 사용하지 않아도 된다.
+        # user_data = user_doc.to_dict()
+        # hashed_password = user_data.get('password')  # 키 이름을 'password'로 사용
 
         # 비밀번호 검증
-        if not pwd_context.verify(data.password, hashed_password):
-            raise HTTPException(status_code=400, detail="이메일 또는 비밀번호가 유효하지 않습니다.")
+        # if not pwd_context.verify(data.password, hashed_password):
+        #     raise HTTPException(status_code=400, detail="이메일 또는 비밀번호가 유효하지 않습니다.")
 
         # 비밀번호가 일치하면 커스텀 토큰 생성
-        custom_token = auth.create_custom_token(user.uid)
+        # custom_token = auth.create_custom_token(user.uid)
         
         # Token 스키마로 반환
-        return Token(access_token=custom_token.decode('utf-8'), token_type="Bearer")
+        # return Token(access_token=custom_token.decode('utf-8'), token_type="Bearer")
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -226,15 +254,16 @@ def complete_reset_password(token: str = Form(...), new_password: str = Form(...
 
         # Firestore에서 사용자 데이터 가져오기
         user_doc = db.collection('user').filter('email', '==', email).get()
+  
         if not user_doc:
             raise HTTPException(status_code=404, detail="존재하지 않는 유저입니다.")
         
         # 비밀번호 해싱
-        hashed_password = hash_password(new_password)
+        #hashed_password = hash_password(new_password)
 
         # Firestore에 해싱한 비밀번호 저장
         user_ref = user_doc[0].reference
-        user_ref.update({'password': hashed_password})
+        #user_ref.update({'password': hashed_password})
 
         # 비밀번호 재설정 후 Firestore에서 토큰 삭제
         db.collection('password_reset_tokens').document(token).delete()
@@ -248,6 +277,7 @@ def complete_reset_password(token: str = Form(...), new_password: str = Form(...
 # # 유저 검색
 # @router.get("/users/{name}")
 # def get_user(name: str):
+
 #     doc_ref = db.collection('user').filter('name','==', name)
 #     doc = doc_ref.stream()
 
@@ -267,7 +297,7 @@ def search_resources():
 def study_progress(user_id: str):
     try:
         # Firestore에서 유저의 UID로 연결된 학습 목록 가져오기
-        study_ref = db.collection('study').where('user_id', '==', user_id)
+        study_ref = db.collection('study').filter('user_id', '==', user_id)
         study_docs = study_ref.stream()
         
         # 학습 목록을 저장할 리스트 생성
@@ -292,10 +322,10 @@ def delete_study(study_ids: list[str], token: str = Depends(oauth2_scheme)):
     try:
         # 특정 사용자에 대한 학습 중 주어진 SID 목록에 해당하는 학습 문서들을 가져오기
         study_ref = db.collection('study')
-        query = study_ref.where('user_id', '==', user_id).where('study_id', 'in', study_ids)
+        query = study_ref.filter('user_id', '==', user_id).filter('study_id', 'in', study_ids)
         study_docs = query.stream()
 
-        # deleted_study_names = [] # 삭제된 학습의 이름을 저장할 리스트
+        deleted_study_names = [] # 삭제된 학습의 이름을 저장할 리스트
 
         for doc in study_docs:
             study_data = doc.to_dict()

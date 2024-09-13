@@ -11,12 +11,9 @@ from controller import seeder
 # FastAPI 인스턴스 생성
 app = FastAPI()
 
-# 라우트 등록
-app.include_router(router)
-
 # Firebase 초기화 (필요한 경우)
 if not firebase_admin._apps:
-    settings.initialize_firebase()
+    settings.initialize_firebase() 
 
 # firebase authentication으로 토큰을 확인하고 없으면 user/login으로 넘어가게 만든다.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
@@ -55,6 +52,7 @@ async def home_page(user: firebase_auth.UserRecord = Depends(get_current_user)):
 
         # 광고 정보 가져오기
         ads_ref = db.collection('ad')
+
         ads_docs = ads_ref.stream()
 
         ads_list = []
