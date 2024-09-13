@@ -27,7 +27,7 @@ async def new_videos_save(text: str):
         
         # http 요청
         # AI 서버에 데이터 요청
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(verify=False) as client:   # httpx SSL 인증서 우회
             response = await client.post(ai_server, json=payload)
 
         # 응답 확인
