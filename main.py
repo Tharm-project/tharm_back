@@ -1,5 +1,4 @@
 from fastapi import FastAPI, Depends, HTTPException
-from routes.routes import router
 from fastapi.security import OAuth2PasswordBearer
 import firebase_admin
 from firebase_admin import auth as firebase_auth

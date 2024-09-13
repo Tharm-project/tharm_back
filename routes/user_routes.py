@@ -75,7 +75,7 @@ async def login(data: UserSchema):
 def find_user(user_info: UserSearchSchema):
     try:
         # Firestore에서 사용자 이름과 전화번호로 사용자 검색
-        doc_ref = db.collection('user').filter('name', '==', user_info.name).filter('phone', '==', user_info.phone)
+        doc_ref = db.collection('user').where('name', '==', user_info.name).where('phone', '==', user_info.phone)
 
         user_docs = doc_ref.stream()
 

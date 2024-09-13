@@ -6,7 +6,7 @@ router = APIRouter()
 @router.get("/{user_id}")
 def get_study_progress(user_id: str):
     try:
-        study_ref = db.collection('study').filter('user_id', '==', user_id)
+        study_ref = db.collection('study').where('user_id', '==', user_id)
         study_docs = study_ref.stream()
 
         study_list = []
