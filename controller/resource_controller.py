@@ -31,7 +31,7 @@ class ResourceController:
 
             # 텍스트를 문장 단위로 나누기
             sentences = [sent.text for sent in self.kiwi.split_into_sents(text)]
-            
+            # sentences = kiwi.split_into_sents(text, return_tokens=False)
             # 문장이 추출되지 않은 경우 확인
             if not sentences:
                 raise HTTPException(status_code=400, detail="추출된 문장이 없음! 오류확인 ㄱㄱ")
