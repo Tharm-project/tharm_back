@@ -71,7 +71,7 @@
 #                 raise HTTPException(status_code = 404, detail = "사용자를 찾을 수 없습니다.")
             
 #             # 메인화면에 필요한 정보 넘김
-#             study_ref = db.collection('study').filter('user_id','==',user_doc['uid']).order_by('created_at',direction=firestore.Query.DESCENDING).limit(1)
+#             study_ref = db.collection('study').where('user_id','==',user_doc['uid']).order_by('created_at',direction=firestore.Query.DESCENDING).limit(1)
 #             study_docs = study_ref.stream()
 #             stduy_data = study_docs.to_dict()
 
@@ -251,7 +251,7 @@
 #         email = get_email_from_pwtoken(token)
 
 #         # Firestore에서 사용자 데이터 가져오기
-#         user_doc = db.collection('user').filter('email', '==', email).get()
+#         user_doc = db.collection('user').where('email', '==', email).get()
   
 #         if not user_doc:
 #             raise HTTPException(status_code=404, detail="존재하지 않는 유저입니다.")
@@ -276,7 +276,7 @@
 # # @router.get("/users/{name}")
 # # def get_user(name: str):
 
-# #     doc_ref = db.collection('user').filter('name','==', name)
+# #     doc_ref = db.collection('user').where('name','==', name)
 # #     doc = doc_ref.stream()
 
 # #     if doc.exists:
@@ -295,7 +295,7 @@
 # def study_progress(user_id: str):
 #     try:
 #         # Firestore에서 유저의 UID로 연결된 학습 목록 가져오기
-#         study_ref = db.collection('study').filter('user_id', '==', user_id)
+#         study_ref = db.collection('study').where('user_id', '==', user_id)
 #         study_docs = study_ref.stream()
         
 #         # 학습 목록을 저장할 리스트 생성
@@ -320,7 +320,7 @@
 #     try:
 #         # 특정 사용자에 대한 학습 중 주어진 SID 목록에 해당하는 학습 문서들을 가져오기
 #         study_ref = db.collection('study')
-#         query = study_ref.filter('user_id', '==', user_id).filter('study_id', 'in', study_ids)
+#         query = study_ref.where('user_id', '==', user_id).where('study_id', 'in', study_ids)
 #         study_docs = query.stream()
 
 #         deleted_study_names = [] # 삭제된 학습의 이름을 저장할 리스트
