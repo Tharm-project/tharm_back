@@ -1,4 +1,4 @@
-import os
+import yaml
 import smtplib
 from dotenv import load_dotenv
 from email.mime.text import MIMEText
@@ -9,17 +9,18 @@ from itsdangerous import URLSafeTimedSerializer
 load_dotenv()
 
 # 환경 변수 읽기
-smtp_server = os.getenv('SMTP_SERVER')
-smtp_port = int(os.getenv('SMTP_PORT'))
-smtp_user = os.getenv('SMTP_USER')
-smtp_password = os.getenv('SMTP_PASSWORD')
+with open('/config.yml','r') as file:
+    config = yaml.safe_load(file)
 
-# 이메일을 통해 보낼 url
-DOMAIN = os.getenv('ALLOW_DOMAIN')
+smtp_server = config['smtp_server']['SMTP_SERVER']
+smtp_port = config['smtp_server']['SMTP_PORT']
+smtp_user = config['smtp_server']['SMTP_USER']
+smtp_password = config['smtp_server']['SMTP_PASSWORD']
+DOMAIN = config['smtp_server']['ALLOW_DOMAIN']
 
 # 시크릿키 서명 훼손방지
-serializer = URLSafeTimedSerializer(os.getenv("SECRET_KEY"))
-SALT = os.getenv("PASSWORD_RESET_SALT")
+serializer = URLSafeTimedSerializer(config['smtp_server']["SECRET_KEY"])
+SALT = config['smtp_server']["PASSWORD_RESET_SALT"]
 
 def send_reset_email(to_email: str, token: str):
     reset_link = f"{DOMAIN}/reset-password?token={token}"

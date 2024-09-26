@@ -1,11 +1,16 @@
 import firebase_admin
+import yaml
 from firebase_admin import storage, initialize_app, credentials
 import os
 
 def initialize_firebase():
     try:
         # 환경 변수에서 자격 증명 파일 경로 가져옴
-        cred_path = os.getenv("FIREBASE_JSON")
+        with open('/config.yml','r') as file:
+            config = yaml.safe_load(file)
+
+        # Firebase 설정 정보 추출
+        cred_path = config['firebase']['json_path']
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = cred_path
 
         # Firebase가 이미 초기화 되어 있는지 확인

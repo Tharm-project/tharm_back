@@ -1,0 +1,12 @@
+firebase:
+  json_path: "firebase_set/service_account.json"
+  storage_bucket: "tharm-16f63.appspot.com"
+
+smtp_server:
+  SMTP_SERVER: "smtp-gmail.com"
+  SMTP_PORT: 587
+  SMTP_USER: 'wltjd1688@gmail.com'
+  SMTP_PASSWORD: 'rhfoqkq0197!J'
+  ALLOW_DOMAIN: 'tharm-16f63.firebaseapp.com'
+  SECRET_KEY: 'what-should-i-do'
+  PASSWORD_RESET_SALT: 'dddd'

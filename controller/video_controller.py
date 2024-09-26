@@ -3,9 +3,7 @@ from pydantic import UUID4
 from fastapi import HTTPException
 from firebase_admin import firestore, storage
 from kiwipiepy import Kiwi
-import requests
 import httpx
-import os
 
 db = firestore.client()
 bucket = storage.bucket()  # Firebase Storage 버킷 객체
@@ -37,7 +35,7 @@ async def new_videos_save(text: str):
         ai_data = response.json()
 
         new_video = {
-            "id": UUID4(),
+            # "id": UUID4(), -> 데이터 저장시 추가로 넣어줘야함
             # "study_id": UUID4(),
             # "resource_id": UUID4(),
             "url": ai_data.url,
@@ -52,17 +50,16 @@ async def new_videos_save(text: str):
 
         print('## new video 데이터 확인: ', new_video)
 
-        # Firestore에 메타데이터 저장
-        save_video_metadata_to_firebase(new_video)
-
-        # AI쪽으로 JSON 데이터 전송
-        async with httpx.AsyncClient() as client:
-            response = await client.post(ai_server, json=new_video)
-        
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="AI 서버에 데이터 전송 오류")
+        # Firestore에 메타데이터 저장 -> ai 서버에서 firestroe로 바로 저장해준다고 합니다!!
+        # save_video_metadata_to_firebase(new_video)
 
         return {"message": "비디오 메타데이터 및 문장 데이터 처리 완료"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+# url 새로 만드는 함수
+def regenerate_video_url(doc_id: str):
+    video = bucket.blob(f"video/{doc_id}.mp4")
+    new_video_url = video.generate_signed_url(expiration=3600)
+    return new_video_url
