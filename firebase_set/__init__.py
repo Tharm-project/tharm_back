@@ -6,7 +6,7 @@ from firebase_admin import storage, credentials, firestore, auth
 def initialize_firebase():
     try:
         # 환경 변수에서 자격 증명 파일 경로 가져옴
-        with open('/config.yml','r') as file:
+        with open('config.yml','r') as file:
             config = yaml.safe_load(file)
 
         # Firebase 설정 정보 추출

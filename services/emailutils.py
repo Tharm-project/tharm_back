@@ -1,15 +1,11 @@
 import yaml
 import smtplib
-from dotenv import load_dotenv
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from itsdangerous import URLSafeTimedSerializer
 
-# .env 파일에서 smtp관련 변수 로드
-load_dotenv()
-
 # 환경 변수 읽기
-with open('/config.yml','r') as file:
+with open('config.yml','r') as file:
     config = yaml.safe_load(file)
 
 smtp_server = config['smtp_server']['SMTP_SERVER']
