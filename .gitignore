@@ -5,6 +5,6 @@ setup.ps1
 *.pyc
 __pycache__/
 .env
-.config.yml
+config.yml
 video
 firebase_set/service_account.json
