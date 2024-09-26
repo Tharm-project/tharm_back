@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, UUID4, Json
+from pydantic import BaseModel, EmailStr, Json
 from typing import List, Optional
 from datetime import datetime
 
@@ -11,6 +11,11 @@ class UserSchema(BaseModel):
     phone: str 
     created_at: Optional[datetime] = None 
 
+# 로그인 스키마
+class loginSchema(BaseModel):
+    email: EmailStr
+    password: str
+
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -18,8 +23,8 @@ class Token(BaseModel):
     
 # Study 스키마 (학습)
 class StudySchema(BaseModel):
-    id: UUID4
-    user_id: UUID4
+    id: str
+    user_id: str
     name: str
     summary: str
     status: float # 소수점 자리...를 넣는다면이니까 일단 float!
@@ -27,9 +32,9 @@ class StudySchema(BaseModel):
 
 # Resource 스키마(pdf, image 파일)
 class ResourceSchema(BaseModel):
-    id: UUID4
-    user_id: UUID4
-    study_id: UUID4
+    id: str
+    user_id: str
+    study_id: str
     url: str #pdf/file에 대한 url
     sentence: Json # { 'data' : ["문장", ... ]} 이런식으로 들어오니 Json!
     total: int #전체 단어수
@@ -38,17 +43,17 @@ class ResourceSchema(BaseModel):
 
 # Search 스키마
 class SearchSchema(BaseModel):
-    id: UUID4
-    user_id: UUID4
-    resource_id:UUID4
+    id: str
+    user_id: str
+    resource_id:str
     query: str #검색 문장
     date: datetime #조회 일자
 
 # Video 스키마 (영상)
 class VideoSchema(BaseModel):
-    id: UUID4
-    study_id: UUID4
-    resource_id: UUID4
+    id: str
+    study_id: str
+    resource_id: str
     title: str #영상 제목
     url: str
     total_time: int #총 재생시간
@@ -59,8 +64,8 @@ class VideoSchema(BaseModel):
 
 # AD 스키마
 class ADSchema(BaseModel):
-    id: UUID4
-    user_id: UUID4
+    id: str
+    user_id: str
     url: str
     advertiser: Optional[str] = None # 광고주가 없을 수 있으니까 기본을 None으로!
     click_num: int #클릭 수(추후 광고 받으면 사용)

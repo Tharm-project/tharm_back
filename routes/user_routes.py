@@ -1,19 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
-from schemas.schemas import UserSchema, Token, UserSearchSchema, PasswordResetSchema
+from schemas.schemas import UserSchema, Token, UserSearchSchema, PasswordResetSchema, loginSchema
 from firebase_admin import auth as firebase_auth
 import requests
-import os
 from firebase_set import auth, db
 from services.emailutils import send_reset_email
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 router = APIRouter()
-
-# Firebase API 키가 설정되어 있는지 확인
-FIREBASE_API = os.getenv('FIREBASE_API')
-if FIREBASE_API is None:
-    raise ValueError("FIREBASE_API environment variable is not set")
 
 @router.post("/create")
 async def create_new_user(create_user: UserSchema):
@@ -21,54 +15,52 @@ async def create_new_user(create_user: UserSchema):
         # 이메일과 비밀번호 필드가 있는지 확인
         if not create_user.email or not create_user.password:
             raise HTTPException(status_code=400, detail="Email and password are required")
+        
+        # Firestore에 문서 생성
+        user_ref = db.collection('user').document()
 
         user_data = {
+            "id": user_ref.id,
             "email": create_user.email,
             "name": create_user.name,
             "phone": create_user.phone,
             "created_at": datetime.now(timezone.utc),
         }
 
-        # Firebase에서 사용자 생성
-        user_record = auth.create_user(
-            email=create_user.email,
-            password=create_user.password,
-        )
-
         # Firestore에 사용자 데이터 저장
-
-        db.collection('user').document(user_record.uid).set(user_data)
+        user_ref.set(user_data)
         return {"message": "User created successfully", "user_data": user_data}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/login", response_model=Token)
-async def login(data: UserSchema):
-    try:
-        firebase_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API}"
-        payload = {
-            "email": data.email,
-            "password": data.password,
-            "returnSecureToken": True
-        }
-        response = requests.post(firebase_url, json=payload)
+# @router.post("/login", response_model=Token)
+# async def login(data: loginSchema):
+#     try:
+#         firebase_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_API}"
+#         print(firebase_url)
+#         payload = {
+#             "email": data.email,
+#             "password": data.password,
+#             "returnSecureToken": True
+#         }
+#         response = requests.post(firebase_url, json=payload)
 
-        # Firebase 응답 처리
-        response_data = response.json()
-        if response.status_code != 200:
-            error_message = response_data.get('error', {}).get('message', 'Invalid email or password')
-            raise HTTPException(status_code=400, detail=error_message)
+#         # Firebase 응답 처리
+#         response_data = response.json()
+#         if response.status_code != 200:
+#             error_message = response_data.get('error', {}).get('message', 'Invalid email or password')
+#             raise HTTPException(status_code=400, detail=error_message)
 
-        # idToken이 응답에 포함되어 있는지 확인
-        if 'idToken' not in response_data:
-            raise HTTPException(status_code=400, detail="Unable to retrieve idToken from Firebase")
+#         # idToken이 응답에 포함되어 있는지 확인
+#         if 'idToken' not in response_data:
+#             raise HTTPException(status_code=400, detail="Unable to retrieve idToken from Firebase")
 
-        id_token = response_data['idToken']
-        return Token(access_token=id_token, token_type="Bearer")
+#         id_token = response_data['idToken']
+#         return Token(access_token=id_token, token_type="Bearer")
 
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=str(e))
 
 # 아이디(이메일) 검색
 @router.post("/find/id")

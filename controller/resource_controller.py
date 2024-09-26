@@ -1,20 +1,21 @@
 import io
 import re
-from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from kiwipiepy import Kiwi
 import pdfplumber
 from pydantic import ValidationError
+from firebase_set import db
 from models.resource import ResourceModel
 from schemas.schemas import ResourceSchema
 from fastapi import HTTPException
+import pdfplumber 
 
 class ResourceController:
     def __init__(self):
         self.model = ResourceModel()
         self.kiwi = Kiwi()
 
-    def process_file(self, user_id: UUID, study_id: UUID, file_content: bytes, file_name: str) -> ResourceSchema:
+    def process_file(self, user_id: str, study_id: str, file_content: bytes, file_name: str) -> ResourceSchema:
         try:
             # PDF 파일에서 텍스트 추출
             with pdfplumber.open(io.BytesIO(file_content)) as pdf:
@@ -38,9 +39,12 @@ class ResourceController:
             # 한글 깨짐 유무 체크 (예: 한글 문장 포함 여부)
             if any([not re.search(r'[\uac00-\ud7af]', sentence) for sentence in sentences]):
                 raise HTTPException(status_code=400, detail="한국어 인코딩 문제 확인")
+            
+            # Resource 문서 생성
+            doc_ref = db.collection('resource').document()
 
             # Resource 데이터를 저장
-            resource_id = uuid4()
+            resource_id = doc_ref.id
             resource = ResourceSchema(
                 id=resource_id,
                 user_id=user_id,
@@ -54,7 +58,7 @@ class ResourceController:
             self.model.add_resource(resource)
             return resource
         
-        except pdfplumber.PDFSyntaxError:
-            raise HTTPException(status_code=400, detail="pdf 파일 구문 에러")
+        # except pdfplumber.PDFSyntaxError:
+        #     raise HTTPException(status_code=400, detail="pdf 파일 구문 에러")
         except Exception as e:
             raise HTTPException(status_code=500, detail=str("예외 처리된 에러 확인: ",e))

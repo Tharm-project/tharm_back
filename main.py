@@ -4,15 +4,15 @@ import firebase_admin
 from firebase_admin import auth as firebase_auth
 from firebase_set import db
 from routes import user_routes, resource_routes, video_routes, study_routes
-import settings
 from controller import seeder
+from firebase_set import initialize_firebase
 
 # FastAPI 인스턴스 생성
 app = FastAPI()
 
 # Firebase 초기화 (필요한 경우)
 if not firebase_admin._apps:
-    settings.initialize_firebase() 
+    initialize_firebase()
 
 # firebase authentication으로 토큰을 확인하고 없으면 user/login으로 넘어가게 만든다.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="user/login")
@@ -28,43 +28,45 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     
 # 홈 페이지
 @app.get("/")
-async def home_page(user: firebase_auth.UserRecord = Depends(get_current_user)):
+# async def home_page(user: firebase_auth.UserRecord = Depends(get_current_user)):
+async def home_page():
     # 메인 페이지(첫 화면): 현재 학습 중인 목록, 학습 목록 출력
     try:
-        # 사용자 정보
-        user_id = user.uid
-        user_name = user.display_name or user.email
+        # # 사용자 정보
+        # user_id = user.uid
+        # user_name = user.display_name or user.email
 
-        # Firestore 내림차순 쿼리 작성 및 실행 (Query 없이)
-        study_ref = db.collection('study').where('user_id', '==', user_id).order_by('created_at', direction='DESCENDING').limit(1)
-        study_docs = study_ref.stream()
+        # # Firestore 내림차순 쿼리 작성 및 실행 (Query 없이)
+        # study_ref = db.collection('study').where('user_id', '==', user_id).order_by('created_at', direction='DESCENDING').limit(1)
+        # study_docs = study_ref.stream()
 
-        # 학습 데이터 가져오기
-        study_data = None
-        for study_doc in study_docs:
-            study_data = study_doc.to_dict()
-            study_data['id'] = study_doc.id
-            break
+        # # 학습 데이터 가져오기
+        # study_data = None
+        # for study_doc in study_docs:
+        #     study_data = study_doc.to_dict()
+        #     study_data['id'] = study_doc.id
+        #     break
 
-        if not study_data:
-            raise HTTPException(status_code=404, detail="학습 데이터를 찾을 수 없습니다.")
+        # if not study_data:
+        #     raise HTTPException(status_code=404, detail="학습 데이터를 찾을 수 없습니다.")
 
-        # 광고 정보 가져오기
-        ads_ref = db.collection('ad')
+        # # 광고 정보 가져오기
+        # ads_ref = db.collection('ad')
 
-        ads_docs = ads_ref.stream()
+        # ads_docs = ads_ref.stream()
 
-        ads_list = []
-        for doc in ads_docs:
-            ad_data = doc.to_dict()
-            ad_data['id'] = doc.id
-            ads_list.append(ad_data)
+        # ads_list = []
+        # for doc in ads_docs:
+        #     ad_data = doc.to_dict()
+        #     ad_data['id'] = doc.id
+        #     ads_list.append(ad_data)
 
-        return {
-            "user": f"Welcome {user_name}!",
-            "last_study": f"Last study is {study_data.get('name')}, and progress is {study_data.get('status')}",
-            "advertisement": ads_list
-        }
+        # return {
+        #     "user": f"Welcome {user_name}!",
+        #     "last_study": f"Last study is {study_data.get('name')}, and progress is {study_data.get('status')}",
+        #     "advertisement": ads_list
+        # }
+        return { "message": "welcome!"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"홈페이지 로드 중 오류: {str(e)}")

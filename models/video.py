@@ -1,9 +1,8 @@
 from firebase_set import db
 from datetime import datetime
-from uuid import uuid4
 
 class VideoModel:
-    def __init__(self, id: uuid4, study_id: uuid4, url:str, total_time: int, watch_status: str, last_watch_time:datetime, created_at: datetime, updated_at:datetime):
+    def __init__(self, id: str, study_id: str, url:str, total_time: int, watch_status: str, last_watch_time:datetime, created_at: datetime, updated_at:datetime):
         self.id = id
         self.study_id = study_id
         self.url = url
